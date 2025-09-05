@@ -1,9 +1,10 @@
 import { useState } from 'react';
-import { ArrowLeft, BookOpen, Lock, User, Eye, EyeOff } from 'lucide-react';
+import { ArrowLeft, BookOpen, Lock, User, Eye, EyeOff, UserPlus } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import StudentDashboard from '@/components/dashboards/StudentDashboard';
 
 interface StudentLoginProps {
@@ -11,18 +12,30 @@ interface StudentLoginProps {
 }
 
 const StudentLogin = ({ onBack }: StudentLoginProps) => {
+  const [isSignup, setIsSignup] = useState(false);
   const [formData, setFormData] = useState({
     matricNumber: '',
-    password: ''
+    password: '',
+    fullName: '',
+    department: '',
+    level: ''
   });
   const [showPassword, setShowPassword] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    // Simulate login - in real app, this would be authentication
-    if (formData.matricNumber && formData.password) {
-      setIsLoggedIn(true);
+    // Simulate login/signup - in real app, this would be authentication
+    if (isSignup) {
+      // Signup logic
+      if (formData.matricNumber && formData.password && formData.fullName && formData.department && formData.level) {
+        setIsLoggedIn(true);
+      }
+    } else {
+      // Login logic
+      if (formData.matricNumber && formData.password) {
+        setIsLoggedIn(true);
+      }
     }
   };
 
@@ -33,12 +46,19 @@ const StudentLogin = ({ onBack }: StudentLoginProps) => {
     });
   };
 
+  const handleSelectChange = (name: string, value: string) => {
+    setFormData({
+      ...formData,
+      [name]: value
+    });
+  };
+
   if (isLoggedIn) {
     return <StudentDashboard studentData={{
-      name: "John Doe",
+      name: formData.fullName || "John Doe",
       matricNumber: formData.matricNumber,
-      department: "Computer Science",
-      level: "ND2",
+      department: formData.department || "Computer Science",
+      level: formData.level || "ND2",
       feesPaid: true
     }} onLogout={() => setIsLoggedIn(false)} />;
   }
@@ -58,17 +78,45 @@ const StudentLogin = ({ onBack }: StudentLoginProps) => {
                 <ArrowLeft className="h-4 w-4" />
               </Button>
               <div className="flex items-center space-x-2">
-                <BookOpen className="h-6 w-6 text-primary" />
+                {isSignup ? (
+                  <UserPlus className="h-6 w-6 text-primary" />
+                ) : (
+                  <BookOpen className="h-6 w-6 text-primary" />
+                )}
                 <span className="font-semibold text-primary">Student Portal</span>
               </div>
             </div>
-            <CardTitle className="text-2xl text-center">Welcome Back</CardTitle>
+            <CardTitle className="text-2xl text-center">
+              {isSignup ? 'Create Account' : 'Welcome Back'}
+            </CardTitle>
             <CardDescription className="text-center">
-              Sign in to your student account to access course registration
+              {isSignup 
+                ? 'Register as a new student to access course registration'
+                : 'Sign in to your student account to access course registration'
+              }
             </CardDescription>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-4">
+              {isSignup && (
+                <div className="space-y-2">
+                  <Label htmlFor="fullName">Full Name</Label>
+                  <div className="relative">
+                    <User className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      id="fullName"
+                      name="fullName"
+                      type="text"
+                      placeholder="Enter your full name"
+                      value={formData.fullName}
+                      onChange={handleInputChange}
+                      className="pl-10 input-academic"
+                      required={isSignup}
+                    />
+                  </div>
+                </div>
+              )}
+
               <div className="space-y-2">
                 <Label htmlFor="matricNumber">Matric Number</Label>
                 <div className="relative">
@@ -85,6 +133,41 @@ const StudentLogin = ({ onBack }: StudentLoginProps) => {
                   />
                 </div>
               </div>
+
+              {isSignup && (
+                <>
+                  <div className="space-y-2">
+                    <Label htmlFor="department">Department</Label>
+                    <Select onValueChange={(value) => handleSelectChange('department', value)} required>
+                      <SelectTrigger className="input-academic">
+                        <SelectValue placeholder="Select your department" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="computer-science">Computer Science</SelectItem>
+                        <SelectItem value="business-administration">Business Administration</SelectItem>
+                        <SelectItem value="engineering">Engineering</SelectItem>
+                        <SelectItem value="science-lab-tech">Science Laboratory Technology</SelectItem>
+                        <SelectItem value="accountancy">Accountancy</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="level">Level</Label>
+                    <Select onValueChange={(value) => handleSelectChange('level', value)} required>
+                      <SelectTrigger className="input-academic">
+                        <SelectValue placeholder="Select your level" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="ND1">ND1</SelectItem>
+                        <SelectItem value="ND2">ND2</SelectItem>
+                        <SelectItem value="HND1">HND1</SelectItem>
+                        <SelectItem value="HND2">HND2</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </>
+              )}
               
               <div className="space-y-2">
                 <Label htmlFor="password">Password</Label>
@@ -94,7 +177,7 @@ const StudentLogin = ({ onBack }: StudentLoginProps) => {
                     id="password"
                     name="password"
                     type={showPassword ? "text" : "password"}
-                    placeholder="Enter your password"
+                    placeholder={isSignup ? "Create a password" : "Enter your password"}
                     value={formData.password}
                     onChange={handleInputChange}
                     className="pl-10 pr-10 input-academic"
@@ -116,20 +199,35 @@ const StudentLogin = ({ onBack }: StudentLoginProps) => {
                 </div>
               </div>
 
-              <div className="flex items-center justify-between">
-                <div className="text-sm">
-                  <Button variant="link" className="p-0 h-auto font-normal text-primary">
-                    Forgot password?
-                  </Button>
+              {!isSignup && (
+                <div className="flex items-center justify-between">
+                  <div className="text-sm">
+                    <Button variant="link" className="p-0 h-auto font-normal text-primary">
+                      Forgot password?
+                    </Button>
+                  </div>
                 </div>
-              </div>
+              )}
 
               <Button type="submit" className="w-full btn-hero">
-                Sign In
+                {isSignup ? 'Create Account' : 'Sign In'}
               </Button>
             </form>
 
-            <div className="mt-6 text-center text-sm text-muted-foreground">
+            <div className="mt-6 text-center">
+              <Button 
+                variant="link" 
+                onClick={() => setIsSignup(!isSignup)}
+                className="text-primary"
+              >
+                {isSignup 
+                  ? 'Already have an account? Sign in' 
+                  : "Don't have an account? Sign up"
+                }
+              </Button>
+            </div>
+
+            <div className="mt-4 text-center text-sm text-muted-foreground">
               Need help? Contact your department or ICT support
             </div>
           </CardContent>
