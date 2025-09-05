@@ -1,10 +1,13 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { ArrowLeft, BookOpen, Lock, User, Eye, EyeOff, UserPlus } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { useToast } from '@/components/ui/use-toast';
+import { supabase } from '@/integrations/supabase/client';
+import { User as SupabaseUser, Session } from '@supabase/supabase-js';
 import StudentDashboard from '@/components/dashboards/StudentDashboard';
 
 interface StudentLoginProps {
@@ -14,29 +17,182 @@ interface StudentLoginProps {
 const StudentLogin = ({ onBack }: StudentLoginProps) => {
   const [isSignup, setIsSignup] = useState(false);
   const [formData, setFormData] = useState({
-    matricNumber: '',
+    email: '',
     password: '',
     fullName: '',
+    matricNumber: '',
     department: '',
     level: ''
   });
   const [showPassword, setShowPassword] = useState(false);
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [user, setUser] = useState<SupabaseUser | null>(null);
+  const [session, setSession] = useState<Session | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [profile, setProfile] = useState<any>(null);
+  const { toast } = useToast();
+
+  // Set up auth state listener
+  useEffect(() => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (event, session) => {
+        setSession(session);
+        setUser(session?.user ?? null);
+        
+        if (session?.user) {
+          setTimeout(() => {
+            fetchUserProfile(session.user.id);
+          }, 0);
+        } else {
+          setProfile(null);
+        }
+      }
+    );
+
+    // Check for existing session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+      setUser(session?.user ?? null);
+      if (session?.user) {
+        fetchUserProfile(session.user.id);
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  const fetchUserProfile = async (userId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('user_id', userId)
+        .single();
+      
+      if (error) {
+        console.error('Error fetching profile:', error);
+        return;
+      }
+      
+      setProfile(data);
+    } catch (error) {
+      console.error('Error fetching profile:', error);
+    }
+  };
+
+  const handleSignup = async () => {
+    if (!formData.email || !formData.password || !formData.fullName || !formData.matricNumber || !formData.department || !formData.level) {
+      toast({
+        title: "Error",
+        description: "Please fill in all required fields",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      // Check if matric number already exists
+      const { data: existingProfile } = await supabase
+        .from('profiles')
+        .select('matric_number')
+        .eq('matric_number', formData.matricNumber)
+        .single();
+
+      if (existingProfile) {
+        toast({
+          title: "Error",
+          description: "This matric number is already registered",
+          variant: "destructive"
+        });
+        setLoading(false);
+        return;
+      }
+
+      const { error } = await supabase.auth.signUp({
+        email: formData.email,
+        password: formData.password,
+        options: {
+          emailRedirectTo: `${window.location.origin}/`,
+          data: {
+            full_name: formData.fullName,
+            matric_number: formData.matricNumber,
+            department: formData.department,
+            level: formData.level
+          }
+        }
+      });
+
+      if (error) {
+        toast({
+          title: "Signup Error",
+          description: error.message,
+          variant: "destructive"
+        });
+      } else {
+        toast({
+          title: "Success",
+          description: "Account created successfully! Please check your email to verify your account.",
+        });
+      }
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleLogin = async () => {
+    if (!formData.email || !formData.password) {
+      toast({
+        title: "Error",
+        description: "Please enter your email and password",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      const { error } = await supabase.auth.signInWithPassword({
+        email: formData.email,
+        password: formData.password
+      });
+
+      if (error) {
+        toast({
+          title: "Login Error",
+          description: error.message,
+          variant: "destructive"
+        });
+      }
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    // Simulate login/signup - in real app, this would be authentication
     if (isSignup) {
-      // Signup logic
-      if (formData.matricNumber && formData.password && formData.fullName && formData.department && formData.level) {
-        setIsLoggedIn(true);
-      }
+      handleSignup();
     } else {
-      // Login logic
-      if (formData.matricNumber && formData.password) {
-        setIsLoggedIn(true);
-      }
+      handleLogin();
     }
+  };
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
   };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -53,14 +209,18 @@ const StudentLogin = ({ onBack }: StudentLoginProps) => {
     });
   };
 
-  if (isLoggedIn) {
-    return <StudentDashboard studentData={{
-      name: formData.fullName || "John Doe",
-      matricNumber: formData.matricNumber,
-      department: formData.department || "Computer Science",
-      level: formData.level || "ND2",
-      feesPaid: true
-    }} onLogout={() => setIsLoggedIn(false)} />;
+  // If user is authenticated and has profile data, show dashboard
+  if (user && profile) {
+    return <StudentDashboard 
+      studentData={{
+        name: profile.full_name,
+        matricNumber: profile.matric_number,
+        department: profile.department,
+        level: profile.level,
+        feesPaid: profile.fees_paid
+      }} 
+      onLogout={handleLogout} 
+    />;
   }
 
   return (
@@ -112,27 +272,49 @@ const StudentLogin = ({ onBack }: StudentLoginProps) => {
                       onChange={handleInputChange}
                       className="pl-10 input-academic"
                       required={isSignup}
+                      disabled={loading}
                     />
                   </div>
                 </div>
               )}
 
               <div className="space-y-2">
-                <Label htmlFor="matricNumber">Matric Number</Label>
+                <Label htmlFor="email">Email Address</Label>
                 <div className="relative">
                   <User className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                   <Input
-                    id="matricNumber"
-                    name="matricNumber"
-                    type="text"
-                    placeholder="e.g., 2023/ND/CS/001"
-                    value={formData.matricNumber}
+                    id="email"
+                    name="email"
+                    type="email"
+                    placeholder="Enter your email address"
+                    value={formData.email}
                     onChange={handleInputChange}
                     className="pl-10 input-academic"
                     required
+                    disabled={loading}
                   />
                 </div>
               </div>
+
+              {isSignup && (
+                <div className="space-y-2">
+                  <Label htmlFor="matricNumber">Matric Number</Label>
+                  <div className="relative">
+                    <User className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      id="matricNumber"
+                      name="matricNumber"
+                      type="text"
+                      placeholder="e.g., 2023/ND/CS/001"
+                      value={formData.matricNumber}
+                      onChange={handleInputChange}
+                      className="pl-10 input-academic"
+                      required={isSignup}
+                      disabled={loading}
+                    />
+                  </div>
+                </div>
+              )}
 
               {isSignup && (
                 <>
