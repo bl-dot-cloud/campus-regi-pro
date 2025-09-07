@@ -59,16 +59,29 @@ export default function StudentManagement({ onStudentUpdate }: StudentManagement
     fetchStudents();
   }, []);
 
+  useEffect(() => {
+    const channel = supabase
+      .channel('admin-students')
+      .on('broadcast', { event: 'student_signed_up' }, () => {
+        fetchStudents();
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []);
   const fetchStudents = async () => {
     try {
       setLoading(true);
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .order('created_at', { ascending: false });
+      const adminKey = localStorage.getItem('admin_key') || '';
+      const { data, error } = await supabase.functions.invoke('admin-students', {
+        body: { action: 'list' },
+        headers: { 'x-admin-key': adminKey },
+      });
 
-      if (error) throw error;
-      setStudents(data || []);
+      if (error) throw error as any;
+      setStudents((data?.profiles as Student[]) || []);
     } catch (error) {
       console.error('Error fetching students:', error);
       toast({

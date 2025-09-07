@@ -45,6 +45,7 @@ const AdminLogin = ({ onBack }: AdminLoginProps) => {
       }
 
       if (data?.success) {
+        localStorage.setItem('admin_key', formData.password);
         setIsLoggedIn(true);
         toast({
           title: "Welcome Admin",

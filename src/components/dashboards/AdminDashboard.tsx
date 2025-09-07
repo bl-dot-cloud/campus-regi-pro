@@ -246,7 +246,7 @@ const AdminDashboard = ({ onLogout }: AdminDashboardProps) => {
             
             <div className="flex items-center space-x-4">
               <Badge variant="secondary">Admin</Badge>
-              <Button variant="outline" size="sm" onClick={onLogout}>
+              <Button variant="outline" size="sm" onClick={() => { localStorage.removeItem('admin_key'); onLogout(); }}>
                 <LogOut className="h-4 w-4 mr-2" />
                 Logout
               </Button>
