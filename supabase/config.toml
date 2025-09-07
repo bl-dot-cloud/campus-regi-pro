@@ -2,3 +2,12 @@ project_id = "ofmerkxbyjaxupqppucb"
 
 [functions.admin-auth]
 verify_jwt = false
+
+[functions.admin-students]
+verify_jwt = false
+
+[functions.admin-courses]
+verify_jwt = false
+
+[functions.admin-reports]
+verify_jwt = false

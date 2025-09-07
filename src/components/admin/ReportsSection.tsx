@@ -54,42 +54,16 @@ export default function ReportsSection() {
     try {
       setLoading(true);
 
-      // Fetch students data
-      const { data: students, error: studentsError } = await supabase
-        .from('profiles')
-        .select('*');
+      const adminKey = localStorage.getItem('admin_key') || '';
+      const { data, error } = await supabase.functions.invoke('admin-reports', {
+        headers: { 'x-admin-key': adminKey },
+      });
 
-      if (studentsError) throw studentsError;
+      if (error || !data) {
+        throw new Error(error?.message || 'Failed to fetch report data');
+      }
 
-      // Fetch courses data
-      const { data: courses, error: coursesError } = await supabase
-        .from('courses')
-        .select('*');
-
-      if (coursesError) throw coursesError;
-
-      // Fetch course registrations with student and course details separately
-      const { data: registrations, error: registrationsError } = await supabase
-        .from('course_registrations')
-        .select('*');
-
-      if (registrationsError) throw registrationsError;
-
-      // Fetch student profiles
-      const { data: profiles, error: profilesError } = await supabase
-        .from('profiles')
-        .select('*');
-
-      if (profilesError) throw profilesError;
-
-      // Fetch courses
-      const { data: coursesData, error: coursesDataError } = await supabase
-        .from('courses')
-        .select('*');
-
-      if (coursesDataError) throw coursesDataError;
-
-      if (registrationsError) throw registrationsError;
+      const { profiles: students, courses, registrations } = data;
 
       // Process students data
       const studentsByDepartment: Record<string, number> = {};
@@ -97,7 +71,7 @@ export default function ReportsSection() {
       let feesPaid = 0;
       let feesUnpaid = 0;
 
-      students?.forEach(student => {
+      students?.forEach((student: any) => {
         studentsByDepartment[student.department] = (studentsByDepartment[student.department] || 0) + 1;
         studentsByLevel[student.level] = (studentsByLevel[student.level] || 0) + 1;
         
@@ -112,7 +86,7 @@ export default function ReportsSection() {
       const coursesByDepartment: Record<string, number> = {};
       const coursesByLevel: Record<string, number> = {};
 
-      courses?.forEach(course => {
+      courses?.forEach((course: any) => {
         coursesByDepartment[course.department] = (coursesByDepartment[course.department] || 0) + 1;
         coursesByLevel[course.level] = (coursesByLevel[course.level] || 0) + 1;
       });
@@ -122,9 +96,9 @@ export default function ReportsSection() {
       const registrationsBySemester: Record<string, number> = {};
       const registrationDetailsList: CourseRegistrationDetail[] = [];
 
-      registrations?.forEach(reg => {
-        const student = profiles?.find(p => p.user_id === reg.user_id);
-        const course = coursesData?.find(c => c.id === reg.course_id);
+      registrations?.forEach((reg: any) => {
+        const student = students?.find((p: any) => p.user_id === reg.user_id);
+        const course = courses?.find((c: any) => c.id === reg.course_id);
         
         if (student && course) {
           const level = course.level;

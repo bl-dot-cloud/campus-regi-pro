@@ -134,6 +134,8 @@ const StudentLogin = ({ onBack }: StudentLoginProps) => {
           title: "Success",
           description: "Account created successfully! Please check your email to verify your account.",
         });
+        // Broadcast student signup event to admin dashboard
+        supabase.channel('admin-students').send({ type: 'broadcast', event: 'student_signed_up', payload: {} });
       }
     } catch (error: any) {
       toast({

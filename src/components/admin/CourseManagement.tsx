@@ -104,28 +104,31 @@ export default function CourseManagement() {
         return;
       }
 
-      const { data, error } = await supabase
-        .from('courses')
-        .insert([{
-          course_code: courseForm.courseCode.toUpperCase(),
-          course_title: courseForm.courseTitle,
-          units: parseInt(courseForm.units),
-          semester: courseForm.semester,
-          level: courseForm.level,
-          department: courseForm.department,
-          description: courseForm.description || null
-        }]);
+      const adminKey = localStorage.getItem('admin_key') || '';
+      const { data, error } = await supabase.functions.invoke('admin-courses', {
+        body: {
+          action: 'insert',
+          payload: {
+            course_code: courseForm.courseCode.toUpperCase(),
+            course_title: courseForm.courseTitle,
+            units: parseInt(courseForm.units),
+            semester: courseForm.semester,
+            level: courseForm.level,
+            department: courseForm.department,
+            description: courseForm.description || null
+          },
+        },
+        headers: { 'x-admin-key': adminKey },
+      });
 
-      if (error) {
-        if (error.code === '23505') {
-          toast({
-            title: "Error",
-            description: "A course with this code already exists",
-            variant: "destructive",
-          });
-          return;
-        }
-        throw error;
+      if (error || !data?.success) {
+        const errorMsg = data?.error || error?.message || 'Failed to add course';
+        toast({
+          title: "Error",
+          description: errorMsg.includes('unique') ? "A course with this code already exists" : errorMsg,
+          variant: "destructive",
+        });
+        return;
       }
 
       toast({
@@ -160,20 +163,27 @@ export default function CourseManagement() {
         return;
       }
 
-      const { error } = await supabase
-        .from('courses')
-        .update({
-          course_code: courseForm.courseCode.toUpperCase(),
-          course_title: courseForm.courseTitle,
-          units: parseInt(courseForm.units),
-          semester: courseForm.semester,
-          level: courseForm.level,
-          department: courseForm.department,
-          description: courseForm.description || null
-        })
-        .eq('id', editingCourse.id);
+      const adminKey = localStorage.getItem('admin_key') || '';
+      const { data, error } = await supabase.functions.invoke('admin-courses', {
+        body: {
+          action: 'update',
+          payload: {
+            id: editingCourse.id,
+            course_code: courseForm.courseCode.toUpperCase(),
+            course_title: courseForm.courseTitle,
+            units: parseInt(courseForm.units),
+            semester: courseForm.semester,
+            level: courseForm.level,
+            department: courseForm.department,
+            description: courseForm.description || null
+          },
+        },
+        headers: { 'x-admin-key': adminKey },
+      });
 
-      if (error) throw error;
+      if (error || !data?.success) {
+        throw new Error(data?.error || error?.message || 'Failed to update course');
+      }
 
       toast({
         title: "Success",
@@ -199,12 +209,18 @@ export default function CourseManagement() {
     }
 
     try {
-      const { error } = await supabase
-        .from('courses')
-        .delete()
-        .eq('id', courseId);
+      const adminKey = localStorage.getItem('admin_key') || '';
+      const { data, error } = await supabase.functions.invoke('admin-courses', {
+        body: {
+          action: 'delete',
+          payload: { id: courseId },
+        },
+        headers: { 'x-admin-key': adminKey },
+      });
 
-      if (error) throw error;
+      if (error || !data?.success) {
+        throw new Error(data?.error || error?.message || 'Failed to delete course');
+      }
 
       toast({
         title: "Success",

@@ -106,59 +106,29 @@ export default function StudentManagement({ onStudentUpdate }: StudentManagement
         return;
       }
 
-      // Check if matric number already exists
-      const { data: existingStudent } = await supabase
-        .from('profiles')
-        .select('matric_number')
-        .eq('matric_number', newStudent.matricNumber)
-        .single();
-
-      if (existingStudent) {
-        toast({
-          title: "Error",
-          description: "A student with this matric number already exists",
-          variant: "destructive",
-        });
-        return;
-      }
-
-      // Create user account
-      const { data: authData, error: authError } = await supabase.auth.signUp({
-        email: newStudent.email,
-        password: newStudent.tempPassword,
-        options: {
-          data: {
-            full_name: newStudent.fullName,
-            matric_number: newStudent.matricNumber,
+      const adminKey = localStorage.getItem('admin_key') || '';
+      const { data, error } = await supabase.functions.invoke('admin-students', {
+        body: {
+          action: 'createStudent',
+          payload: {
+            email: newStudent.email,
+            password: newStudent.tempPassword,
+            fullName: newStudent.fullName,
+            matricNumber: newStudent.matricNumber,
             department: newStudent.department,
-            level: newStudent.level
-          }
-        }
+            level: newStudent.level,
+          },
+        },
+        headers: { 'x-admin-key': adminKey },
       });
 
-      if (authError) {
-        console.error('Auth error:', authError);
+      if (error || !data?.success) {
         toast({
           title: "Error",
-          description: authError.message,
+          description: data?.error || error?.message || "Failed to create student",
           variant: "destructive",
         });
         return;
-      }
-
-      if (authData.user) {
-        // Update the profile to mark as admin-created
-        const { error: updateError } = await supabase
-          .from('profiles')
-          .update({ 
-            admin_created: true,
-            temporary_password: newStudent.tempPassword
-          })
-          .eq('user_id', authData.user.id);
-
-        if (updateError) {
-          console.error('Profile update error:', updateError);
-        }
       }
 
       toast({
@@ -190,12 +160,21 @@ export default function StudentManagement({ onStudentUpdate }: StudentManagement
 
   const toggleFeesStatus = async (studentId: string, currentStatus: boolean) => {
     try {
-      const { error } = await supabase
-        .from('profiles')
-        .update({ fees_paid: !currentStatus })
-        .eq('id', studentId);
+      const adminKey = localStorage.getItem('admin_key') || '';
+      const { data, error } = await supabase.functions.invoke('admin-students', {
+        body: {
+          action: 'toggleFees',
+          payload: {
+            id: studentId,
+            fees_paid: !currentStatus,
+          },
+        },
+        headers: { 'x-admin-key': adminKey },
+      });
 
-      if (error) throw error;
+      if (error || !data?.success) {
+        throw new Error(data?.error || error?.message || 'Failed to update fees status');
+      }
 
       toast({
         title: "Success",
