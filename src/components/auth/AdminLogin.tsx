@@ -4,6 +4,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { useToast } from '@/components/ui/use-toast';
+import { supabase } from '@/integrations/supabase/client';
 import AdminDashboard from '@/components/dashboards/AdminDashboard';
 
 interface AdminLoginProps {
@@ -17,12 +19,53 @@ const AdminLogin = ({ onBack }: AdminLoginProps) => {
   });
   const [showPassword, setShowPassword] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const { toast } = useToast();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Simulate login - in real app, this would be authentication
-    if (formData.username && formData.password) {
-      setIsLoggedIn(true);
+    setLoading(true);
+
+    try {
+      const { data, error } = await supabase.functions.invoke('admin-auth', {
+        body: {
+          username: formData.username,
+          password: formData.password
+        }
+      });
+
+      if (error) {
+        console.error('Auth function error:', error);
+        toast({
+          title: "Authentication Failed",
+          description: "Unable to authenticate. Please try again.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      if (data?.success) {
+        setIsLoggedIn(true);
+        toast({
+          title: "Welcome Admin",
+          description: "Successfully logged in to admin dashboard.",
+        });
+      } else {
+        toast({
+          title: "Invalid Credentials",
+          description: data?.error || "Please check your username and password.",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      console.error('Login error:', error);
+      toast({
+        title: "Login Error",
+        description: "An unexpected error occurred. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -76,6 +119,7 @@ const AdminLogin = ({ onBack }: AdminLoginProps) => {
                     onChange={handleInputChange}
                     className="pl-10 input-academic"
                     required
+                    disabled={loading}
                   />
                 </div>
               </div>
@@ -93,6 +137,7 @@ const AdminLogin = ({ onBack }: AdminLoginProps) => {
                     onChange={handleInputChange}
                     className="pl-10 pr-10 input-academic"
                     required
+                    disabled={loading}
                   />
                   <Button
                     type="button"
@@ -100,6 +145,7 @@ const AdminLogin = ({ onBack }: AdminLoginProps) => {
                     size="sm"
                     className="absolute right-2 top-2 h-6 w-6 p-0"
                     onClick={() => setShowPassword(!showPassword)}
+                    disabled={loading}
                   >
                     {showPassword ? (
                       <EyeOff className="h-4 w-4" />
@@ -110,8 +156,8 @@ const AdminLogin = ({ onBack }: AdminLoginProps) => {
                 </div>
               </div>
 
-              <Button type="submit" className="w-full btn-hero">
-                Sign In
+              <Button type="submit" className="w-full btn-hero" disabled={loading}>
+                {loading ? 'Authenticating...' : 'Sign In'}
               </Button>
             </form>
 
