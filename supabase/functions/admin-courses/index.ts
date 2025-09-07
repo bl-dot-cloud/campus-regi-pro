@@ -58,7 +58,15 @@ serve(async (req) => {
         }])
         .select('*')
 
-      if (error) throw error
+      if (error) {
+        if (error.code === '23505') {
+          return new Response(JSON.stringify({ error: 'A course with this code already exists' }), {
+            status: 400,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          })
+        }
+        throw error
+      }
       return new Response(JSON.stringify({ success: true, course: data?.[0] }), {
         status: 200,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
