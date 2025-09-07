@@ -364,6 +364,7 @@ const StudentLogin = ({ onBack }: StudentLoginProps) => {
                     onChange={handleInputChange}
                     className="pl-10 pr-10 input-academic"
                     required
+                    disabled={loading}
                   />
                   <Button
                     type="button"
@@ -371,6 +372,7 @@ const StudentLogin = ({ onBack }: StudentLoginProps) => {
                     size="sm"
                     className="absolute right-2 top-2 h-6 w-6 p-0"
                     onClick={() => setShowPassword(!showPassword)}
+                    disabled={loading}
                   >
                     {showPassword ? (
                       <EyeOff className="h-4 w-4" />
@@ -391,8 +393,8 @@ const StudentLogin = ({ onBack }: StudentLoginProps) => {
                 </div>
               )}
 
-              <Button type="submit" className="w-full btn-hero">
-                {isSignup ? 'Create Account' : 'Sign In'}
+              <Button type="submit" className="w-full btn-hero" disabled={loading}>
+                {loading ? 'Please wait...' : (isSignup ? 'Create Account' : 'Sign In')}
               </Button>
             </form>
 
