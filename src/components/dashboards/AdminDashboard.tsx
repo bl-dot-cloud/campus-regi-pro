@@ -13,6 +13,9 @@ import {
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import StudentManagement from '@/components/admin/StudentManagement';
+import CourseManagement from '@/components/admin/CourseManagement';
+import ReportsSection from '@/components/admin/ReportsSection';
 
 interface AdminDashboardProps {
   onLogout: () => void;
@@ -24,50 +27,11 @@ const AdminDashboard = ({ onLogout }: AdminDashboardProps) => {
   const renderContent = () => {
     switch (activeTab) {
       case 'courses':
-        return (
-          <div className="space-y-6">
-            <div className="flex items-center justify-between">
-              <h2 className="text-2xl font-bold">Course Management</h2>
-              <Button className="btn-hero">
-                <BookOpen className="h-4 w-4 mr-2" />
-                Add New Course
-              </Button>
-            </div>
-            <Card className="academic-card">
-              <CardContent className="p-6">
-                <p className="text-muted-foreground">Course management interface coming soon...</p>
-              </CardContent>
-            </Card>
-          </div>
-        );
+        return <CourseManagement />;
       case 'students':
-        return (
-          <div className="space-y-6">
-            <div className="flex items-center justify-between">
-              <h2 className="text-2xl font-bold">Student Management</h2>
-              <Button className="btn-hero">
-                <Users className="h-4 w-4 mr-2" />
-                Add New Student
-              </Button>
-            </div>
-            <Card className="academic-card">
-              <CardContent className="p-6">
-                <p className="text-muted-foreground">Student management interface coming soon...</p>
-              </CardContent>
-            </Card>
-          </div>
-        );
+        return <StudentManagement />;
       case 'reports':
-        return (
-          <div className="space-y-6">
-            <h2 className="text-2xl font-bold">Reports & Analytics</h2>
-            <Card className="academic-card">
-              <CardContent className="p-6">
-                <p className="text-muted-foreground">Reports and analytics dashboard coming soon...</p>
-              </CardContent>
-            </Card>
-          </div>
-        );
+        return <ReportsSection />;
       default:
         return (
           <div className="space-y-6">

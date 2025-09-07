@@ -14,8 +14,86 @@ export type Database = {
   }
   public: {
     Tables: {
+      course_registrations: {
+        Row: {
+          academic_session: string
+          course_id: string
+          id: string
+          registration_date: string
+          semester: string
+          status: string
+          user_id: string
+        }
+        Insert: {
+          academic_session: string
+          course_id: string
+          id?: string
+          registration_date?: string
+          semester: string
+          status?: string
+          user_id: string
+        }
+        Update: {
+          academic_session?: string
+          course_id?: string
+          id?: string
+          registration_date?: string
+          semester?: string
+          status?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "course_registrations_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "courses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      courses: {
+        Row: {
+          course_code: string
+          course_title: string
+          created_at: string
+          department: string
+          description: string | null
+          id: string
+          level: string
+          semester: string
+          units: number
+          updated_at: string
+        }
+        Insert: {
+          course_code: string
+          course_title: string
+          created_at?: string
+          department: string
+          description?: string | null
+          id?: string
+          level: string
+          semester: string
+          units: number
+          updated_at?: string
+        }
+        Update: {
+          course_code?: string
+          course_title?: string
+          created_at?: string
+          department?: string
+          description?: string | null
+          id?: string
+          level?: string
+          semester?: string
+          units?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
+          admin_created: boolean | null
           created_at: string
           department: string
           fees_paid: boolean
@@ -23,10 +101,12 @@ export type Database = {
           id: string
           level: string
           matric_number: string
+          temporary_password: string | null
           updated_at: string
           user_id: string
         }
         Insert: {
+          admin_created?: boolean | null
           created_at?: string
           department: string
           fees_paid?: boolean
@@ -34,10 +114,12 @@ export type Database = {
           id?: string
           level: string
           matric_number: string
+          temporary_password?: string | null
           updated_at?: string
           user_id: string
         }
         Update: {
+          admin_created?: boolean | null
           created_at?: string
           department?: string
           fees_paid?: boolean
@@ -45,6 +127,7 @@ export type Database = {
           id?: string
           level?: string
           matric_number?: string
+          temporary_password?: string | null
           updated_at?: string
           user_id?: string
         }
