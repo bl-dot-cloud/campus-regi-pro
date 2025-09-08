@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { 
   Settings, 
   Users, 
@@ -8,11 +8,14 @@ import {
   GraduationCap,
   TrendingUp,
   FileText,
-  AlertCircle
+  AlertCircle,
+  Loader2
 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
 import StudentManagement from '@/components/admin/StudentManagement';
 import CourseManagement from '@/components/admin/CourseManagement';
 import ReportsSection from '@/components/admin/ReportsSection';
@@ -21,8 +24,52 @@ interface AdminDashboardProps {
   onLogout: () => void;
 }
 
+interface DashboardData {
+  totalStudents: number;
+  totalCourses: number;
+  registrationRate: number;
+  activeRegistrations: number;
+  feesPaid: number;
+  feesUnpaid: number;
+  departmentDistribution: { name: string; students: number }[];
+  lastUpdated: string;
+}
+
 const AdminDashboard = ({ onLogout }: AdminDashboardProps) => {
   const [activeTab, setActiveTab] = useState('dashboard');
+  const [dashboardData, setDashboardData] = useState<DashboardData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const { toast } = useToast();
+
+  useEffect(() => {
+    fetchDashboardData();
+  }, []);
+
+  const fetchDashboardData = async () => {
+    try {
+      setLoading(true);
+      const adminKey = localStorage.getItem('admin_key');
+      
+      const { data, error } = await supabase.functions.invoke('admin-dashboard', {
+        headers: {
+          'x-admin-key': adminKey || '',
+        },
+      });
+
+      if (error) throw error;
+      
+      setDashboardData(data);
+    } catch (error) {
+      console.error('Failed to fetch dashboard data:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load dashboard data",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const renderContent = () => {
     switch (activeTab) {
@@ -38,81 +85,95 @@ const AdminDashboard = ({ onLogout }: AdminDashboardProps) => {
             {/* Welcome Banner */}
             <div className="gradient-hero rounded-lg p-6 text-white">
               <h2 className="text-2xl font-bold mb-2">Administrator Dashboard</h2>
-              <p className="text-white/90">Manage courses, students, and system operations</p>
+              <p className="text-white/90">
+                Manage courses, students, and system operations
+                {dashboardData && (
+                  <span className="block text-sm text-white/70 mt-1">
+                    Last updated: {new Date(dashboardData.lastUpdated).toLocaleString()}
+                  </span>
+                )}
+              </p>
             </div>
 
-            {/* Stats Cards */}
-            <div className="grid md:grid-cols-4 gap-6">
-              <Card className="academic-card">
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-sm font-medium text-muted-foreground">Total Students</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-3xl font-bold text-primary">1,247</p>
-                      <div className="flex items-center text-sm text-success mt-1">
-                        <TrendingUp className="h-4 w-4 mr-1" />
-                        +12% from last semester
+            {loading ? (
+              <div className="flex items-center justify-center py-12">
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                <span className="ml-2 text-muted-foreground">Loading dashboard data...</span>
+              </div>
+            ) : (
+              <>
+                {/* Stats Cards */}
+                <div className="grid md:grid-cols-4 gap-6">
+                  <Card className="academic-card">
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-sm font-medium text-muted-foreground">Total Students</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-3xl font-bold text-primary">{dashboardData?.totalStudents || 0}</p>
+                          <div className="flex items-center text-sm text-muted-foreground mt-1">
+                            Registered students
+                          </div>
+                        </div>
+                        <Users className="h-8 w-8 text-primary/60" />
                       </div>
-                    </div>
-                    <Users className="h-8 w-8 text-primary/60" />
-                  </div>
-                </CardContent>
-              </Card>
+                    </CardContent>
+                  </Card>
 
-              <Card className="academic-card">
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-sm font-medium text-muted-foreground">Total Courses</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-3xl font-bold text-primary">156</p>
-                      <div className="flex items-center text-sm text-muted-foreground mt-1">
-                        Across all departments
+                  <Card className="academic-card">
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-sm font-medium text-muted-foreground">Total Courses</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-3xl font-bold text-primary">{dashboardData?.totalCourses || 0}</p>
+                          <div className="flex items-center text-sm text-muted-foreground mt-1">
+                            Across all departments
+                          </div>
+                        </div>
+                        <BookOpen className="h-8 w-8 text-primary/60" />
                       </div>
-                    </div>
-                    <BookOpen className="h-8 w-8 text-primary/60" />
-                  </div>
-                </CardContent>
-              </Card>
+                    </CardContent>
+                  </Card>
 
-              <Card className="academic-card">
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-sm font-medium text-muted-foreground">Registration Rate</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-3xl font-bold text-primary">87%</p>
-                      <div className="flex items-center text-sm text-success mt-1">
-                        <TrendingUp className="h-4 w-4 mr-1" />
-                        Above target
+                  <Card className="academic-card">
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-sm font-medium text-muted-foreground">Registration Rate</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-3xl font-bold text-primary">{dashboardData?.registrationRate || 0}%</p>
+                          <div className="flex items-center text-sm text-muted-foreground mt-1">
+                            {dashboardData?.activeRegistrations || 0} active registrations
+                          </div>
+                        </div>
+                        <BarChart3 className="h-8 w-8 text-primary/60" />
                       </div>
-                    </div>
-                    <BarChart3 className="h-8 w-8 text-primary/60" />
-                  </div>
-                </CardContent>
-              </Card>
+                    </CardContent>
+                  </Card>
 
-              <Card className="academic-card">
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-sm font-medium text-muted-foreground">Pending Issues</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-3xl font-bold text-warning">23</p>
-                      <div className="flex items-center text-sm text-muted-foreground mt-1">
-                        Require attention
+                  <Card className="academic-card">
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-sm font-medium text-muted-foreground">Fees Status</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-3xl font-bold text-success">{dashboardData?.feesPaid || 0}</p>
+                          <div className="flex items-center text-sm text-muted-foreground mt-1">
+                            {dashboardData?.feesUnpaid || 0} unpaid
+                          </div>
+                        </div>
+                        <AlertCircle className="h-8 w-8 text-success/60" />
                       </div>
-                    </div>
-                    <AlertCircle className="h-8 w-8 text-warning/60" />
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
+                    </CardContent>
+                  </Card>
+                </div>
+              </>
+            )}
 
             {/* Recent Activity & Quick Actions */}
             <div className="grid md:grid-cols-2 gap-6">
@@ -197,34 +258,40 @@ const AdminDashboard = ({ onLogout }: AdminDashboardProps) => {
             </div>
 
             {/* Department Overview */}
-            <Card className="academic-card">
-              <CardHeader>
-                <CardTitle>Department Overview</CardTitle>
-                <CardDescription>Student distribution across departments</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="grid md:grid-cols-3 gap-4">
-                  {[
-                    { name: 'Computer Science', students: 342, color: 'bg-primary' },
-                    { name: 'Engineering', students: 289, color: 'bg-success' },
-                    { name: 'Business Studies', students: 256, color: 'bg-warning' },
-                    { name: 'Science Technology', students: 198, color: 'bg-destructive' },
-                    { name: 'General Studies', students: 162, color: 'bg-muted-foreground' }
-                  ].map((dept) => (
-                    <div key={dept.name} className="flex items-center justify-between p-3 rounded-lg border">
-                      <div className="flex items-center space-x-3">
-                        <div className={`w-3 h-3 rounded-full ${dept.color}`}></div>
-                        <div>
-                          <p className="font-medium">{dept.name}</p>
-                          <p className="text-sm text-muted-foreground">{dept.students} students</p>
+            {!loading && dashboardData && (
+              <Card className="academic-card">
+                <CardHeader>
+                  <CardTitle>Department Overview</CardTitle>
+                  <CardDescription>Student distribution across departments</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid md:grid-cols-3 gap-4">
+                    {dashboardData.departmentDistribution.slice(0, 6).map((dept, index) => {
+                      const colors = ['bg-primary', 'bg-success', 'bg-warning', 'bg-destructive', 'bg-muted-foreground', 'bg-accent'];
+                      const color = colors[index % colors.length];
+                      
+                      return (
+                        <div key={dept.name} className="flex items-center justify-between p-3 rounded-lg border">
+                          <div className="flex items-center space-x-3">
+                            <div className={`w-3 h-3 rounded-full ${color}`}></div>
+                            <div>
+                              <p className="font-medium">{dept.name}</p>
+                              <p className="text-sm text-muted-foreground">{dept.students} students</p>
+                            </div>
+                          </div>
+                          <Badge variant="secondary">{dept.students}</Badge>
                         </div>
+                      );
+                    })}
+                    {dashboardData.departmentDistribution.length === 0 && (
+                      <div className="col-span-3 text-center text-muted-foreground py-4">
+                        No department data available
                       </div>
-                      <Badge variant="secondary">{dept.students}</Badge>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
           </div>
         );
     }
