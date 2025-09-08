@@ -54,6 +54,7 @@ export type Database = {
       }
       courses: {
         Row: {
+          academic_session: string | null
           course_code: string
           course_title: string
           created_at: string
@@ -66,6 +67,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          academic_session?: string | null
           course_code: string
           course_title: string
           created_at?: string
@@ -78,6 +80,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          academic_session?: string | null
           course_code?: string
           course_title?: string
           created_at?: string

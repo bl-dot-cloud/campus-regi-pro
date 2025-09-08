@@ -1,10 +1,12 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { BookOpen, Plus, X, AlertCircle, CheckCircle, FileDown } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
 
 interface StudentData {
   name: string;
@@ -16,11 +18,14 @@ interface StudentData {
 
 interface Course {
   id: string;
-  code: string;
-  title: string;
+  course_code: string;
+  course_title: string;
   units: number;
-  type: 'Compulsory' | 'Elective';
-  lecturer: string;
+  department: string;
+  level: string;
+  semester: string;
+  description?: string;
+  academic_session?: string;
 }
 
 interface CourseRegistrationProps {
@@ -34,18 +39,34 @@ const CourseRegistration = ({ studentData }: CourseRegistrationProps) => {
   const [selectedDepartment, setSelectedDepartment] = useState(studentData.department);
   const [selectedCourses, setSelectedCourses] = useState<Course[]>([]);
   const [showCourses, setShowCourses] = useState(false);
+  const [availableCourses, setAvailableCourses] = useState<Course[]>([]);
+  const [loadingCourses, setLoadingCourses] = useState(false);
+  const { toast } = useToast();
 
-  // Mock available courses based on selection
-  const availableCourses: Course[] = [
-    { id: '1', code: 'CSC 201', title: 'Computer Programming II', units: 3, type: 'Compulsory', lecturer: 'Dr. Johnson' },
-    { id: '2', code: 'CSC 203', title: 'Data Structures', units: 3, type: 'Compulsory', lecturer: 'Prof. Smith' },
-    { id: '3', code: 'CSC 205', title: 'Database Systems', units: 3, type: 'Compulsory', lecturer: 'Dr. Brown' },
-    { id: '4', code: 'CSC 207', title: 'Web Development', units: 2, type: 'Elective', lecturer: 'Mr. Wilson' },
-    { id: '5', code: 'MAT 201', title: 'Mathematics III', units: 3, type: 'Compulsory', lecturer: 'Dr. Davis' },
-    { id: '6', code: 'ENG 201', title: 'Technical Writing', units: 2, type: 'Compulsory', lecturer: 'Mrs. Taylor' },
-    { id: '7', code: 'CSC 209', title: 'Mobile App Development', units: 2, type: 'Elective', lecturer: 'Mr. Lee' },
-    { id: '8', code: 'CSC 211', title: 'Network Security', units: 3, type: 'Elective', lecturer: 'Dr. White' }
-  ];
+  const fetchAvailableCourses = async () => {
+    try {
+      setLoadingCourses(true);
+      const { data, error } = await supabase
+        .from('courses')
+        .select('*')
+        .eq('department', selectedDepartment)
+        .eq('level', selectedLevel)
+        .eq('semester', selectedSemester === 'first' ? 'First' : 'Second')
+        .eq('academic_session', selectedSession);
+
+      if (error) throw error;
+      setAvailableCourses(data || []);
+    } catch (error) {
+      console.error('Error fetching courses:', error);
+      toast({
+        title: "Error",
+        description: "Failed to fetch available courses",
+        variant: "destructive",
+      });
+    } finally {
+      setLoadingCourses(false);
+    }
+  };
 
   const totalUnits = selectedCourses.reduce((sum, course) => sum + course.units, 0);
   const maxUnits = 24;
@@ -53,6 +74,7 @@ const CourseRegistration = ({ studentData }: CourseRegistrationProps) => {
 
   const handleSelectionSubmit = () => {
     if (selectedSession && selectedSemester && selectedLevel && selectedDepartment) {
+      fetchAvailableCourses();
       setShowCourses(true);
     }
   };
@@ -169,9 +191,9 @@ const CourseRegistration = ({ studentData }: CourseRegistrationProps) => {
             <Button 
               onClick={handleSelectionSubmit} 
               className="w-full btn-hero"
-              disabled={!selectedSession || !selectedSemester || !selectedLevel || !selectedDepartment}
+              disabled={!selectedSession || !selectedSemester || !selectedLevel || !selectedDepartment || loadingCourses}
             >
-              View Available Courses
+              {loadingCourses ? 'Loading Courses...' : 'View Available Courses'}
             </Button>
           </CardContent>
         </Card>
@@ -204,29 +226,38 @@ const CourseRegistration = ({ studentData }: CourseRegistrationProps) => {
             <CardDescription>Select courses to add to your registration</CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
-            {availableCourses
-              .filter(course => !selectedCourses.find(c => c.id === course.id))
-              .map((course) => (
-                <div key={course.id} className="flex items-center justify-between p-3 border rounded-lg">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-1">
-                      <span className="font-medium">{course.code}</span>
-                      <Badge variant={course.type === 'Compulsory' ? 'default' : 'secondary'}>
-                        {course.type}
-                      </Badge>
+            {loadingCourses ? (
+              <p className="text-muted-foreground text-center py-4">Loading courses...</p>
+            ) : availableCourses.length === 0 ? (
+              <p className="text-muted-foreground text-center py-4">No courses available for selected criteria</p>
+            ) : (
+              availableCourses
+                .filter(course => !selectedCourses.find(c => c.id === course.id))
+                .map((course) => (
+                  <div key={course.id} className="flex items-center justify-between p-3 border rounded-lg">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="font-medium">{course.course_code}</span>
+                        <Badge variant="default">
+                          {course.units} units
+                        </Badge>
+                      </div>
+                      <p className="text-sm text-muted-foreground">{course.course_title}</p>
+                      <p className="text-xs text-muted-foreground">{course.department} • {course.level}</p>
+                      {course.description && (
+                        <p className="text-xs text-muted-foreground mt-1">{course.description}</p>
+                      )}
                     </div>
-                    <p className="text-sm text-muted-foreground">{course.title}</p>
-                    <p className="text-xs text-muted-foreground">{course.lecturer} • {course.units} units</p>
+                    <Button
+                      size="sm"
+                      onClick={() => addCourse(course)}
+                      disabled={totalUnits + course.units > maxUnits}
+                    >
+                      <Plus className="h-4 w-4" />
+                    </Button>
                   </div>
-                  <Button
-                    size="sm"
-                    onClick={() => addCourse(course)}
-                    disabled={totalUnits + course.units > maxUnits}
-                  >
-                    <Plus className="h-4 w-4" />
-                  </Button>
-                </div>
-              ))}
+                ))
+            )}
           </CardContent>
         </Card>
 
@@ -250,13 +281,13 @@ const CourseRegistration = ({ studentData }: CourseRegistrationProps) => {
                   <div key={course.id} className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
                     <div className="flex-1">
                       <div className="flex items-center gap-2 mb-1">
-                        <span className="font-medium">{course.code}</span>
-                        <Badge variant={course.type === 'Compulsory' ? 'default' : 'secondary'}>
-                          {course.type}
+                        <span className="font-medium">{course.course_code}</span>
+                        <Badge variant="default">
+                          {course.units} units
                         </Badge>
                       </div>
-                      <p className="text-sm text-muted-foreground">{course.title}</p>
-                      <p className="text-xs text-muted-foreground">{course.units} units</p>
+                      <p className="text-sm text-muted-foreground">{course.course_title}</p>
+                      <p className="text-xs text-muted-foreground">{course.department}</p>
                     </div>
                     <Button
                       size="sm"

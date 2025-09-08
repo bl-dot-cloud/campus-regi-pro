@@ -27,6 +27,7 @@ interface Course {
 export default function CourseManagement() {
   const [courses, setCourses] = useState<Course[]>([]);
   const [loading, setLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [editingCourse, setEditingCourse] = useState<Course | null>(null);
@@ -39,7 +40,8 @@ export default function CourseManagement() {
     semester: '',
     level: '',
     department: '',
-    description: ''
+    description: '',
+    academicSession: ''
   });
 
   const departments = [
@@ -88,14 +90,16 @@ export default function CourseManagement() {
       semester: '',
       level: '',
       department: '',
-      description: ''
+      description: '',
+      academicSession: ''
     });
   };
 
   const handleAddCourse = async () => {
     try {
+      setSubmitting(true);
       if (!courseForm.courseCode || !courseForm.courseTitle || !courseForm.units || 
-          !courseForm.semester || !courseForm.level || !courseForm.department) {
+          !courseForm.semester || !courseForm.level || !courseForm.department || !courseForm.academicSession) {
         toast({
           title: "Validation Error",
           description: "Please fill in all required fields",
@@ -115,7 +119,8 @@ export default function CourseManagement() {
             semester: courseForm.semester,
             level: courseForm.level,
             department: courseForm.department,
-            description: courseForm.description || null
+            description: courseForm.description || null,
+            academic_session: courseForm.academicSession
           },
         },
         headers: { 'x-admin-key': adminKey },
@@ -146,6 +151,8 @@ export default function CourseManagement() {
         description: "Failed to add course",
         variant: "destructive",
       });
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -153,8 +160,9 @@ export default function CourseManagement() {
     if (!editingCourse) return;
 
     try {
+      setSubmitting(true);
       if (!courseForm.courseCode || !courseForm.courseTitle || !courseForm.units || 
-          !courseForm.semester || !courseForm.level || !courseForm.department) {
+          !courseForm.semester || !courseForm.level || !courseForm.department || !courseForm.academicSession) {
         toast({
           title: "Validation Error",
           description: "Please fill in all required fields",
@@ -175,7 +183,8 @@ export default function CourseManagement() {
             semester: courseForm.semester,
             level: courseForm.level,
             department: courseForm.department,
-            description: courseForm.description || null
+            description: courseForm.description || null,
+            academic_session: courseForm.academicSession
           },
         },
         headers: { 'x-admin-key': adminKey },
@@ -200,6 +209,8 @@ export default function CourseManagement() {
         description: "Failed to update course",
         variant: "destructive",
       });
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -247,7 +258,8 @@ export default function CourseManagement() {
       semester: course.semester,
       level: course.level,
       department: course.department,
-      description: course.description || ''
+      description: course.description || '',
+      academicSession: (course as any).academic_session || ''
     });
   };
 
@@ -408,6 +420,19 @@ export default function CourseManagement() {
               </div>
 
               <div className="space-y-2">
+                <Label>Academic Session</Label>
+                <Select value={courseForm.academicSession} onValueChange={(value) => setCourseForm({...courseForm, academicSession: value})}>
+                  <SelectTrigger className="input-academic">
+                    <SelectValue placeholder="Select session" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="2023/2024">2023/2024</SelectItem>
+                    <SelectItem value="2024/2025">2024/2025</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
                 <Label htmlFor="description">Description (Optional)</Label>
                 <Textarea
                   id="description"
@@ -419,8 +444,8 @@ export default function CourseManagement() {
                 />
               </div>
 
-              <Button onClick={handleAddCourse} className="w-full btn-hero">
-                Add Course
+              <Button onClick={handleAddCourse} disabled={submitting} className="w-full btn-hero">
+                {submitting ? 'Adding...' : 'Add Course'}
               </Button>
             </div>
           </DialogContent>

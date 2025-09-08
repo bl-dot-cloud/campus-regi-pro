@@ -14,6 +14,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import CourseRegistration from '@/components/courses/CourseRegistration';
+import ProfileManagement from '@/components/profile/ProfileManagement';
 
 interface StudentData {
   name: string;
@@ -30,13 +31,18 @@ interface StudentDashboardProps {
 
 const StudentDashboard = ({ studentData, onLogout }: StudentDashboardProps) => {
   const [activeTab, setActiveTab] = useState('dashboard');
+  const [currentStudentData, setCurrentStudentData] = useState(studentData);
+
+  const handleProfileUpdate = (updatedData: StudentData) => {
+    setCurrentStudentData(updatedData);
+  };
 
   const renderContent = () => {
     switch (activeTab) {
       case 'courses':
-        return <CourseRegistration studentData={studentData} />;
+        return <CourseRegistration studentData={currentStudentData} />;
       case 'profile':
-        return <div className="p-6">Profile Management (Coming Soon)</div>;
+        return <ProfileManagement studentData={currentStudentData} onProfileUpdate={handleProfileUpdate} />;
       default:
         return (
           <div className="space-y-6">

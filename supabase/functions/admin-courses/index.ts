@@ -37,8 +37,8 @@ serve(async (req) => {
     const { action, payload } = await req.json()
 
     if (action === 'insert') {
-      const { course_code, course_title, units, semester, level, department, description } = payload || {}
-      if (!course_code || !course_title || !units || !semester || !level || !department) {
+      const { course_code, course_title, units, semester, level, department, description, academic_session } = payload || {}
+      if (!course_code || !course_title || !units || !semester || !level || !department || !academic_session) {
         return new Response(JSON.stringify({ error: 'Missing required fields' }), {
           status: 400,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -55,6 +55,7 @@ serve(async (req) => {
           level,
           department,
           description: description || null,
+          academic_session,
         }])
         .select('*')
 
