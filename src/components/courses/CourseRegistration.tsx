@@ -133,6 +133,107 @@ const CourseRegistration = ({ studentData }: CourseRegistrationProps) => {
 
   const canSubmitRegistration = totalUnits >= minUnits && totalUnits <= maxUnits && studentData.feesPaid;
 
+  const handlePreviewRegistration = () => {
+    const registrationData = {
+      studentInfo: {
+        name: studentData.name,
+        matricNumber: studentData.matricNumber,
+        department: selectedDepartment,
+        level: selectedLevel,
+      },
+      academicSession: selectedSession,
+      semester: selectedSemester === 'first' ? 'First' : 'Second',
+      courses: selectedCourses,
+      totalUnits,
+    };
+    
+    toast({
+      title: "Registration Preview",
+      description: `${selectedCourses.length} courses selected (${totalUnits} units) for ${selectedSession} ${selectedSemester === 'first' ? 'First' : 'Second'} Semester`,
+    });
+  };
+
+  const handleSubmitRegistration = async () => {
+    if (!canSubmitRegistration) return;
+    
+    try {
+      // Get current authenticated user
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        toast({
+          title: "Authentication Error",
+          description: "Please log in to submit registration",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Submit each course registration
+      const registrations = selectedCourses.map(course => ({
+        course_id: course.id,
+        user_id: user.id,
+        academic_session: selectedSession,
+        semester: selectedSemester === 'first' ? 'First' : 'Second',
+      }));
+
+      const { error } = await supabase
+        .from('course_registrations')
+        .insert(registrations);
+
+      if (error) throw error;
+
+      toast({
+        title: "Registration Successful",
+        description: `Successfully registered for ${selectedCourses.length} courses`,
+      });
+
+      // Clear selected courses after successful registration
+      setSelectedCourses([]);
+    } catch (error) {
+      console.error('Registration error:', error);
+      toast({
+        title: "Registration Failed",
+        description: "Failed to submit course registration. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleDownloadRegistration = () => {
+    // Create a simple text-based registration slip
+    const registrationText = `
+COURSE REGISTRATION SLIP
+========================
+
+Student Information:
+- Name: ${studentData.name}
+- Matric Number: ${studentData.matricNumber}
+- Department: ${selectedDepartment}
+- Level: ${selectedLevel}
+
+Academic Details:
+- Session: ${selectedSession}
+- Semester: ${selectedSemester === 'first' ? 'First' : 'Second'} Semester
+
+Registered Courses:
+${selectedCourses.map(course => `- ${course.course_code}: ${course.course_title} (${course.units} units)`).join('\n')}
+
+Total Units: ${totalUnits}
+
+Generated on: ${new Date().toLocaleDateString()}
+    `.trim();
+
+    const blob = new Blob([registrationText], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `registration-${studentData.matricNumber}-${selectedSession}-${selectedSemester}.txt`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
   if (!studentData.feesPaid) {
     return (
       <div className="space-y-6">
@@ -376,13 +477,17 @@ const CourseRegistration = ({ studentData }: CourseRegistrationProps) => {
               </p>
             </div>
             <div className="flex gap-3">
-              <Button variant="outline">
+              <Button variant="outline" onClick={handleDownloadRegistration} disabled={selectedCourses.length === 0}>
                 <FileDown className="h-4 w-4 mr-2" />
+                Download Registration
+              </Button>
+              <Button variant="outline" onClick={handlePreviewRegistration} disabled={selectedCourses.length === 0}>
                 Preview Registration
               </Button>
               <Button 
                 className="btn-hero"
                 disabled={!canSubmitRegistration}
+                onClick={handleSubmitRegistration}
               >
                 <CheckCircle className="h-4 w-4 mr-2" />
                 Submit Registration
