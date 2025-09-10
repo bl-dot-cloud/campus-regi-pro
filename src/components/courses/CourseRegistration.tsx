@@ -42,14 +42,51 @@ const CourseRegistration = ({ studentData }: CourseRegistrationProps) => {
   const [availableCourses, setAvailableCourses] = useState<Course[]>([]);
   const [loadingCourses, setLoadingCourses] = useState(false);
   const { toast } = useToast();
+  const [departments, setDepartments] = useState<string[]>([]);
+
+  // Normalize potential slug or variant department names to match DB values
+  function normalizeDepartment(val: string) {
+    const map: Record<string, string> = {
+      'computer-science': 'Computer Science',
+      'business-administration': 'Business Administration',
+      'engineering': 'Engineering',
+      'science-lab-tech': 'Science',
+      'accountancy': 'Accountancy',
+      'Business Studies': 'Business Administration',
+      'Science Technology': 'Science',
+    };
+    return map[val] ?? val;
+  }
+
+  // Load available departments from DB and normalize initial selection
+  useEffect(() => {
+    const fetchDepartments = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('courses')
+          .select('department');
+        if (error) throw error;
+        const list = Array.from(new Set((data || []).map((d: any) => d.department).filter(Boolean)));
+        setDepartments(list);
+      } catch (e) {
+        console.error('Error fetching departments:', e);
+      }
+    };
+    fetchDepartments();
+    // Normalize any slugged department coming from profile
+    setSelectedDepartment((prev) => normalizeDepartment(prev));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const fetchAvailableCourses = async () => {
     try {
       setLoadingCourses(true);
+      const normalizedDept = normalizeDepartment(selectedDepartment || studentData.department);
+      console.log('Fetching courses with:', { department: normalizedDept, level: selectedLevel, semester: selectedSemester, session: selectedSession });
       const { data, error } = await supabase
         .from('courses')
         .select('*')
-        .eq('department', selectedDepartment)
+        .eq('department', normalizedDept)
         .eq('level', selectedLevel)
         .eq('semester', selectedSemester === 'first' ? 'First' : 'Second')
         .eq('academic_session', selectedSession);
@@ -179,10 +216,9 @@ const CourseRegistration = ({ studentData }: CourseRegistrationProps) => {
                     <SelectValue placeholder="Select department" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="Computer Science">Computer Science</SelectItem>
-                    <SelectItem value="Engineering">Engineering</SelectItem>
-                    <SelectItem value="Business Studies">Business Studies</SelectItem>
-                    <SelectItem value="Science Technology">Science Technology</SelectItem>
+                    {departments.map((dept) => (
+                      <SelectItem key={dept} value={dept}>{dept}</SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
