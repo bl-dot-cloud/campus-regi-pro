@@ -27,7 +27,7 @@ const Index = () => {
             <GraduationCap className="h-16 w-16" />
           </div>
           <h1 className="text-4xl md:text-6xl font-bold mb-4">
-            Foundation Polytechnic
+            Welcome To Foundation Polytechnic
           </h1>
           <p className="text-xl md:text-2xl text-white/90 mb-2">
             Course Registration System
