@@ -8,12 +8,14 @@ import {
   CheckCircle,
   AlertCircle,
   Download,
-  Plus
+  Plus,
+  History
 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import CourseRegistration from '@/components/courses/CourseRegistration';
+import RegistrationHistory from '@/components/courses/RegistrationHistory';
 import ProfileManagement from '@/components/profile/ProfileManagement';
 
 interface StudentData {
@@ -41,6 +43,8 @@ const StudentDashboard = ({ studentData, onLogout }: StudentDashboardProps) => {
     switch (activeTab) {
       case 'courses':
         return <CourseRegistration studentData={currentStudentData} />;
+      case 'history':
+        return <RegistrationHistory studentData={currentStudentData} />;
       case 'profile':
         return <ProfileManagement studentData={currentStudentData} onProfileUpdate={handleProfileUpdate} />;
       default:
@@ -229,6 +233,7 @@ const StudentDashboard = ({ studentData, onLogout }: StudentDashboardProps) => {
             {[
               { id: 'dashboard', label: 'Dashboard', icon: BookOpen },
               { id: 'courses', label: 'Course Registration', icon: Plus },
+              { id: 'history', label: 'Registration History', icon: History },
               { id: 'profile', label: 'Profile', icon: User }
             ].map((tab) => (
               <button

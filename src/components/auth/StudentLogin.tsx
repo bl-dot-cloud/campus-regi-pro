@@ -117,7 +117,7 @@ const StudentLogin = ({ onBack }: StudentLoginProps) => {
           data: {
             full_name: formData.fullName,
             matric_number: formData.matricNumber,
-            department: formData.department,
+              department: formData.department,
             level: formData.level
           }
         }
@@ -327,11 +327,13 @@ const StudentLogin = ({ onBack }: StudentLoginProps) => {
                         <SelectValue placeholder="Select your department" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="computer-science">Computer Science</SelectItem>
-                        <SelectItem value="business-administration">Business Administration</SelectItem>
-                        <SelectItem value="engineering">Engineering</SelectItem>
-                        <SelectItem value="science-lab-tech">Science Laboratory Technology</SelectItem>
-                        <SelectItem value="accountancy">Accountancy</SelectItem>
+                        <SelectItem value="Computer Science">Computer Science</SelectItem>
+                        <SelectItem value="Business Administration">Business Administration</SelectItem>
+                        <SelectItem value="Engineering">Engineering</SelectItem>
+                        <SelectItem value="Science">Science</SelectItem>
+                        <SelectItem value="Accountancy">Accountancy</SelectItem>
+                        <SelectItem value="Mathematics">Mathematics</SelectItem>
+                        <SelectItem value="General Studies">General Studies</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>

@@ -50,7 +50,8 @@ export default function CourseManagement() {
     'Business Administration',
     'Science',
     'Mathematics',
-    'General Studies'
+    'General Studies',
+    'Accountancy',
   ];
 
   const levels = ['ND1', 'ND2', 'HND1', 'HND2'];

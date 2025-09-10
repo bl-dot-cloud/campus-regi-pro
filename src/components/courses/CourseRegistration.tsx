@@ -42,17 +42,59 @@ const CourseRegistration = ({ studentData }: CourseRegistrationProps) => {
   const [availableCourses, setAvailableCourses] = useState<Course[]>([]);
   const [loadingCourses, setLoadingCourses] = useState(false);
   const { toast } = useToast();
+  const [departments, setDepartments] = useState<string[]>([]);
+
+  // Normalize potential slug or variant department names to match DB values
+  function normalizeDepartment(val: string) {
+    const map: Record<string, string> = {
+      'computer-science': 'Computer Science',
+      'business-administration': 'Business Administration',
+      'engineering': 'Engineering',
+      'science-lab-tech': 'Science',
+      'accountancy': 'Accountancy',
+      'Business Studies': 'Business Administration',
+      'Science Technology': 'Science',
+    };
+    return map[val] ?? val;
+  }
+
+  // Load available departments from DB and normalize initial selection
+  useEffect(() => {
+    const fetchDepartments = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('courses')
+          .select('department');
+        if (error) throw error;
+        const list = Array.from(new Set((data || []).map((d: any) => d.department).filter(Boolean)));
+        setDepartments(list);
+      } catch (e) {
+        console.error('Error fetching departments:', e);
+      }
+    };
+    fetchDepartments();
+    // Normalize any slugged department coming from profile
+    setSelectedDepartment((prev) => normalizeDepartment(prev));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const fetchAvailableCourses = async () => {
     try {
       setLoadingCourses(true);
-      const { data, error } = await supabase
+      const normalizedDept = normalizeDepartment(selectedDepartment || studentData.department);
+      console.log('Fetching courses with:', { department: normalizedDept, level: selectedLevel, semester: selectedSemester, session: selectedSession });
+      const semesterFilter = selectedSemester === 'first' ? 'First' : 'Second';
+      let query = supabase
         .from('courses')
         .select('*')
-        .eq('department', selectedDepartment)
+        .eq('department', normalizedDept)
         .eq('level', selectedLevel)
-        .eq('semester', selectedSemester === 'first' ? 'First' : 'Second')
-        .eq('academic_session', selectedSession);
+        .eq('semester', semesterFilter);
+
+      // Include courses that either match the selected session OR have no session set (legacy/admin entries)
+      query = query.or(`academic_session.eq.${selectedSession},academic_session.is.null`);
+
+      const { data, error } = await query;
 
       if (error) throw error;
       setAvailableCourses(data || []);
@@ -90,6 +132,107 @@ const CourseRegistration = ({ studentData }: CourseRegistrationProps) => {
   };
 
   const canSubmitRegistration = totalUnits >= minUnits && totalUnits <= maxUnits && studentData.feesPaid;
+
+  const handlePreviewRegistration = () => {
+    const registrationData = {
+      studentInfo: {
+        name: studentData.name,
+        matricNumber: studentData.matricNumber,
+        department: selectedDepartment,
+        level: selectedLevel,
+      },
+      academicSession: selectedSession,
+      semester: selectedSemester === 'first' ? 'First' : 'Second',
+      courses: selectedCourses,
+      totalUnits,
+    };
+    
+    toast({
+      title: "Registration Preview",
+      description: `${selectedCourses.length} courses selected (${totalUnits} units) for ${selectedSession} ${selectedSemester === 'first' ? 'First' : 'Second'} Semester`,
+    });
+  };
+
+  const handleSubmitRegistration = async () => {
+    if (!canSubmitRegistration) return;
+    
+    try {
+      // Get current authenticated user
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        toast({
+          title: "Authentication Error",
+          description: "Please log in to submit registration",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Submit each course registration
+      const registrations = selectedCourses.map(course => ({
+        course_id: course.id,
+        user_id: user.id,
+        academic_session: selectedSession,
+        semester: selectedSemester === 'first' ? 'First' : 'Second',
+      }));
+
+      const { error } = await supabase
+        .from('course_registrations')
+        .insert(registrations);
+
+      if (error) throw error;
+
+      toast({
+        title: "Registration Successful",
+        description: `Successfully registered for ${selectedCourses.length} courses`,
+      });
+
+      // Clear selected courses after successful registration
+      setSelectedCourses([]);
+    } catch (error) {
+      console.error('Registration error:', error);
+      toast({
+        title: "Registration Failed",
+        description: "Failed to submit course registration. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleDownloadRegistration = () => {
+    // Create a simple text-based registration slip
+    const registrationText = `
+COURSE REGISTRATION SLIP
+========================
+
+Student Information:
+- Name: ${studentData.name}
+- Matric Number: ${studentData.matricNumber}
+- Department: ${selectedDepartment}
+- Level: ${selectedLevel}
+
+Academic Details:
+- Session: ${selectedSession}
+- Semester: ${selectedSemester === 'first' ? 'First' : 'Second'} Semester
+
+Registered Courses:
+${selectedCourses.map(course => `- ${course.course_code}: ${course.course_title} (${course.units} units)`).join('\n')}
+
+Total Units: ${totalUnits}
+
+Generated on: ${new Date().toLocaleDateString()}
+    `.trim();
+
+    const blob = new Blob([registrationText], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `registration-${studentData.matricNumber}-${selectedSession}-${selectedSemester}.txt`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
 
   if (!studentData.feesPaid) {
     return (
@@ -179,10 +322,9 @@ const CourseRegistration = ({ studentData }: CourseRegistrationProps) => {
                     <SelectValue placeholder="Select department" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="Computer Science">Computer Science</SelectItem>
-                    <SelectItem value="Engineering">Engineering</SelectItem>
-                    <SelectItem value="Business Studies">Business Studies</SelectItem>
-                    <SelectItem value="Science Technology">Science Technology</SelectItem>
+                    {departments.map((dept) => (
+                      <SelectItem key={dept} value={dept}>{dept}</SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
@@ -335,13 +477,17 @@ const CourseRegistration = ({ studentData }: CourseRegistrationProps) => {
               </p>
             </div>
             <div className="flex gap-3">
-              <Button variant="outline">
+              <Button variant="outline" onClick={handleDownloadRegistration} disabled={selectedCourses.length === 0}>
                 <FileDown className="h-4 w-4 mr-2" />
+                Download Registration
+              </Button>
+              <Button variant="outline" onClick={handlePreviewRegistration} disabled={selectedCourses.length === 0}>
                 Preview Registration
               </Button>
               <Button 
                 className="btn-hero"
                 disabled={!canSubmitRegistration}
+                onClick={handleSubmitRegistration}
               >
                 <CheckCircle className="h-4 w-4 mr-2" />
                 Submit Registration
