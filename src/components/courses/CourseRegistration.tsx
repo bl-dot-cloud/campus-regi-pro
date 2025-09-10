@@ -83,13 +83,18 @@ const CourseRegistration = ({ studentData }: CourseRegistrationProps) => {
       setLoadingCourses(true);
       const normalizedDept = normalizeDepartment(selectedDepartment || studentData.department);
       console.log('Fetching courses with:', { department: normalizedDept, level: selectedLevel, semester: selectedSemester, session: selectedSession });
-      const { data, error } = await supabase
+      const semesterFilter = selectedSemester === 'first' ? 'First' : 'Second';
+      let query = supabase
         .from('courses')
         .select('*')
         .eq('department', normalizedDept)
         .eq('level', selectedLevel)
-        .eq('semester', selectedSemester === 'first' ? 'First' : 'Second')
-        .eq('academic_session', selectedSession);
+        .eq('semester', semesterFilter);
+
+      // Include courses that either match the selected session OR have no session set (legacy/admin entries)
+      query = query.or(`academic_session.eq.${selectedSession},academic_session.is.null`);
+
+      const { data, error } = await query;
 
       if (error) throw error;
       setAvailableCourses(data || []);
