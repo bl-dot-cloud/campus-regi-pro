@@ -45,7 +45,7 @@ All colors MUST be HSL.
     /* Academic gradients */
     --gradient-primary: linear-gradient(135deg, hsl(var(--primary)), hsl(209 95% 45%));
     --gradient-secondary: linear-gradient(135deg, hsl(var(--secondary)), hsl(210 40% 90%));
-    --gradient-hero: linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(209 95% 45%) 100%);
+    --gradient-hero: linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(209, 85%, 64%) 100%);
 
     /* Academic shadows */
     --shadow-academic: 0 4px 20px -2px hsl(var(--primary) / 0.1);

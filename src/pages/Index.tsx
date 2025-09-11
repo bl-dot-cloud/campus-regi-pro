@@ -4,6 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import StudentLogin from '@/components/auth/StudentLogin';
 import AdminLogin from '@/components/auth/AdminLogin';
+import foundation from "../../images/foundation.jpg";
 
 const Index = () => {
   const [selectedRole, setSelectedRole] = useState<'student' | 'admin' | null>(null);
@@ -19,8 +20,19 @@ const Index = () => {
   }
 
   return (
-    <div className="min-h-screen gradient-hero flex items-center justify-center p-4">
-      <div className="max-w-4xl w-full">
+    <div 
+      className="min-h-screen flex items-center justify-center p-4 relative"
+      style={{
+        backgroundImage: `url(${foundation})`,
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+        backgroundRepeat: 'no-repeat'
+      }}
+    >
+      {/* Overlay for better text readability */}
+      <div className="absolute inset-0 bg-black/50"></div>
+      
+      <div className="max-w-4xl w-full z-10">
         {/* Hero Section */}
         <div className="text-center text-white mb-12">
           <div className="flex items-center justify-center mb-6">
@@ -39,7 +51,7 @@ const Index = () => {
 
         {/* Role Selection Cards */}
         <div className="grid md:grid-cols-2 gap-8 max-w-2xl mx-auto">
-          <Card className="academic-card cursor-pointer transform hover:scale-105 transition-bounce" 
+          <Card className="academic-card cursor-pointer transform hover:scale-105 transition-bounce bg-white/95" 
                 onClick={() => setSelectedRole('student')}>
             <CardHeader className="text-center pb-4">
               <div className="flex justify-center mb-4">
@@ -65,7 +77,7 @@ const Index = () => {
             </CardContent>
           </Card>
 
-          <Card className="academic-card cursor-pointer transform hover:scale-105 transition-bounce" 
+          <Card className="academic-card cursor-pointer transform hover:scale-105 transition-bounce bg-white/95" 
                 onClick={() => setSelectedRole('admin')}>
             <CardHeader className="text-center pb-4">
               <div className="flex justify-center mb-4">
@@ -93,7 +105,7 @@ const Index = () => {
         </div>
 
         {/* Footer Info */}
-        <div className="text-center mt-12 text-white/70">
+        <div className="text-center mt-12 text-white/90">
           <p className="text-sm">
             For technical support, contact the ICT department
           </p>
